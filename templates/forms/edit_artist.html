@@ -35,8 +35,8 @@
     </div>
     <div class="form-group">
       <label for="website">Website</label>
-      {{ form.website(class_ = 'form-control', placeholder='http://', autofocus
-        = true, value=artist.website) }}
+      {{ form.website_link(class_ = 'form-control', placeholder='http://', autofocus
+        = true, value=artist.website_link) }}
     </div>
     <div class="form-group">
       <label for="image_link">Image Link</label>
@@ -59,7 +59,7 @@
         class="form-control">{% if artist.seeking_description %} {{artist.seeking_description}} {% endif %}</textarea>
     </div>
     <input type="submit" value="Edit artist" class="btn btn-primary btn-lg btn-block" />
-    {{form.hidden_tag()}}
+   
   </form>
 </div>
 {% endblock %}

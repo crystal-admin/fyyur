@@ -42,8 +42,8 @@ block content %}
     </div>
     <div class="form-group">
       <label for="website">Website</label>
-      {{ form.website(class_ = 'form-control', placeholder='http://', autofocus
-			= true, value=venue.website) }}
+      {{ form.website_link(class_ = 'form-control', placeholder='http://', autofocus
+			= true, value=venue.website_link) }}
     </div>
     <div class="form-group">
       <label for="image_link">Image Link</label>
@@ -66,7 +66,7 @@ block content %}
         class="form-control">{% if venue.seeking_description %} {{venue.seeking_description}} {% endif %}</textarea>
     </div>
     <input type="submit" value="Edit Venue" class="btn btn-primary btn-lg btn-block" />
-    {{form.hidden_tag()}}
+    
   </form>
 </div>
 {% endblock %}
