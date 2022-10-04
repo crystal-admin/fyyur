@@ -16,25 +16,25 @@ from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 
-#----------------------------------------------------------------------------#
+# ----------------------------------------------------------------------------#
 # App Config.
-#----------------------------------------------------------------------------#
+# ----------------------------------------------------------------------------#
 
 app = Flask(__name__)
 moment = Moment(app)
+
+# ----------------------------------------------------------------------------#
+# Connect to a local postgresql database
+# ----------------------------------------------------------------------------#
+
 app.config.from_object('config')
 db = SQLAlchemy(app)
 
-
-#----------------------------------------------------------------------------#
-# Connect to a local postgresql database
-#----------------------------------------------------------------------------#
-
 migrate = Migrate(app, db)
 
-#----------------------------------------------------------------------------#
+# ----------------------------------------------------------------------------#
 # Models.
-#----------------------------------------------------------------------------#
+# ----------------------------------------------------------------------------#
 
 
 class Venue(db.Model):
@@ -171,18 +171,44 @@ def venues():
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
-  # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
-  # seach for Hop should return "The Musical Hop".
-  # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
-  response={
-    "count": 1,
-    "data": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }
+ 
+#   response={
+#     "count": 1,
+#     "data": [{
+#       "id": 2,
+#       "name": "The Dueling Pianos Bar",
+#       "num_upcoming_shows": 0,
+#     }]
+#   }
+
+  # get the search term from the request
+  search_term = request.form.get("search_term", "")
+  
+  # response object
+  response = {}
+  
+  all_venues = list(Venue.query.filter(
+      Venue.name.ilike(f"%{search_term}%") |
+      Venue.state.ilike(f"%{search_term}%") |
+      Venue.city.ilike(f"%{search_term}%") 
+  ).all())
+  response["count"] = len(all_venues)
+  
+  # empty array to hold each venue data
+  response["data"] = []
+  
+  # looping through the venues data
+  for venue in all_venues:
+      venue_record = {
+          "id": venue.id,
+          "name": venue.name,
+          "num_upcoming_shows": len(list(filter(lambda x: x.start_time > datetime.now(), venue.shows)))
+      }
+      #add the venue_record data to the response
+      response["data"].append(venue_record)
+       
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
+
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
@@ -361,18 +387,49 @@ def artists():
 
 @app.route('/artists/search', methods=['POST'])
 def search_artists():
-  # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
-  # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
-  # search for "band" should return "The Wild Sax Band".
-  response={
-    "count": 1,
-    "data": [{
-      "id": 4,
-      "name": "Guns N Petals",
-      "num_upcoming_shows": 0,
-    }]
-  }
-  return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
+  
+#   response={
+#     "count": 1,
+#     "data": [{
+#       "id": 4,
+#       "name": "Guns N Petals",
+#       "num_upcoming_shows": 0,
+#     }]
+#   }
+
+    #get the search value from the request
+    search_term = request.form.get('search_term', '')
+    
+    
+    all_artists = Artist.query.filter(
+        Artist.name.ilike(f"%{search_term}%") |
+        Artist.city.ilike(f"%{search_term}%") |
+        Artist.state.ilike(f"%{search_term}%")
+    ).all()
+    
+    #response object 
+    response = {
+        "count": len(all_artists),
+        "data": []
+    }
+
+    for artist in all_artists:
+        artist_record = {}
+        artist_record["name"] = artist.name
+        artist_record["id"] = artist.id
+
+        #initialize upcoming shows to 0
+        upcoming_shows = 0
+        
+        for show in artist.shows:
+            if show.start_time > datetime.now():
+                #increment the upcoming_shows by 1
+                upcoming_shows = upcoming_shows + 1
+        artist_record["upcoming_shows"] = upcoming_shows
+
+        response["data"].append(artist_record)
+    return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
+
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
@@ -565,45 +622,62 @@ def create_artist_submission():
 
 @app.route('/shows')
 def shows():
-  # displays list of shows at /shows
-  # TODO: replace with real venues data.
-  data=[{
-    "venue_id": 1,
-    "venue_name": "The Musical Hop",
-    "artist_id": 4,
-    "artist_name": "Guns N Petals",
-    "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
-    "start_time": "2019-05-21T21:30:00.000Z"
-  }, {
-    "venue_id": 3,
-    "venue_name": "Park Square Live Music & Coffee",
-    "artist_id": 5,
-    "artist_name": "Matt Quevedo",
-    "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
-    "start_time": "2019-06-15T23:00:00.000Z"
-  }, {
-    "venue_id": 3,
-    "venue_name": "Park Square Live Music & Coffee",
-    "artist_id": 6,
-    "artist_name": "The Wild Sax Band",
-    "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-    "start_time": "2035-04-01T20:00:00.000Z"
-  }, {
-    "venue_id": 3,
-    "venue_name": "Park Square Live Music & Coffee",
-    "artist_id": 6,
-    "artist_name": "The Wild Sax Band",
-    "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-    "start_time": "2035-04-08T20:00:00.000Z"
-  }, {
-    "venue_id": 3,
-    "venue_name": "Park Square Live Music & Coffee",
-    "artist_id": 6,
-    "artist_name": "The Wild Sax Band",
-    "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-    "start_time": "2035-04-15T20:00:00.000Z"
-  }]
+ 
+#   data=[{
+#     "venue_id": 1,
+#     "venue_name": "The Musical Hop",
+#     "artist_id": 4,
+#     "artist_name": "Guns N Petals",
+#     "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
+#     "start_time": "2019-05-21T21:30:00.000Z"
+#   }, {
+#     "venue_id": 3,
+#     "venue_name": "Park Square Live Music & Coffee",
+#     "artist_id": 5,
+#     "artist_name": "Matt Quevedo",
+#     "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
+#     "start_time": "2019-06-15T23:00:00.000Z"
+#   }, {
+#     "venue_id": 3,
+#     "venue_name": "Park Square Live Music & Coffee",
+#     "artist_id": 6,
+#     "artist_name": "The Wild Sax Band",
+#     "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
+#     "start_time": "2035-04-01T20:00:00.000Z"
+#   }, {
+#     "venue_id": 3,
+#     "venue_name": "Park Square Live Music & Coffee",
+#     "artist_id": 6,
+#     "artist_name": "The Wild Sax Band",
+#     "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
+#     "start_time": "2035-04-08T20:00:00.000Z"
+#   }, {
+#     "venue_id": 3,
+#     "venue_name": "Park Square Live Music & Coffee",
+#     "artist_id": 6,
+#     "artist_name": "The Wild Sax Band",
+#     "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
+#     "start_time": "2035-04-15T20:00:00.000Z"
+#   }]
+
+  #data array
+  data = []
+  
+  #query data from the show model
+  shows = Show.query.all()
+  for show in shows:
+      temp = {}
+      temp["venue_id"] = show.venues.id
+      temp["venue_name"] = show.venues.name
+      temp["artist_id"] = show.artists.id
+      temp["artist_name"] = show.artists.name
+      temp["artist_image_link"] = show.artists.image_link
+      temp["start_time"] = show.start_time.strftime("%m/%d/%Y, %H:%M:%S")
+      
+      data.append(temp)
+      
   return render_template('pages/shows.html', shows=data)
+
 
 @app.route('/shows/create')
 def create_shows():
